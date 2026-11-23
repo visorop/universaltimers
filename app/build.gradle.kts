@@ -22,7 +22,7 @@ android {
         minSdk = 24
         targetSdk = 35
         versionCode = 9
-        versionName = "0.3.0"
+        versionName = "0.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -30,9 +30,9 @@ android {
     signingConfigs {
         create("release") {
             storeFile = rootProject.file(signingProps.getProperty("storeFile", "release.jks"))
-            storePassword = signingProps.getProperty("storePassword", "")
-            keyAlias = signingProps.getProperty("keyAlias", "release")
-            keyPassword = signingProps.getProperty("keyPassword", "")
+            storePassword = signingProps.getProperty("storePassword", "123456")
+            keyAlias = signingProps.getProperty("keyAlias", "key0")
+            keyPassword = signingProps.getProperty("keyPassword", "123456")
         }
     }
 

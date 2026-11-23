@@ -29,6 +29,7 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -147,6 +148,7 @@ private fun SwipeItem(
 ) {
 
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var deleteConfirmed by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -157,7 +159,7 @@ private fun SwipeItem(
                 TextButton(
                     onClick = {
                         showDeleteDialog = false
-                        onDelete()
+                        deleteConfirmed = true
                     }
                 ) {
                     Text("Delete")
@@ -182,11 +184,16 @@ private fun SwipeItem(
         }
     )
 
-    LaunchedEffect(dismissState.currentValue) {
-        when (dismissState.currentValue) {
-            SwipeToDismissBoxValue.EndToStart -> Unit // already covered
-            SwipeToDismissBoxValue.StartToEnd -> onEdit()
-            SwipeToDismissBoxValue.Settled -> Unit // don`t care
+    if (deleteConfirmed) {
+        LaunchedEffect(deleteConfirmed) {
+            onDelete()
+            deleteConfirmed = false
+        }
+    }
+
+    if (dismissState.currentValue == SwipeToDismissBoxValue.StartToEnd) {
+        LaunchedEffect(dismissState.currentValue) {
+            onEdit()
         }
     }
 

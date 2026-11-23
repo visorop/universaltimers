@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,11 +31,15 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +60,7 @@ fun HomeScreen(
     onToggleTheme: () -> Unit,
     onBundleClick: (TimerBundle) -> Unit,
     onDeleteBundle: (TimerBundle) -> Unit,
+    onEditBundle: (TimerBundle) -> Unit,
     onAddClick: () -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -115,8 +122,9 @@ fun HomeScreen(
             ) {
                 item { Spacer(modifier = Modifier.height(4.dp)) }
                 items(bundles, key = { it.id }) { bundle ->
-                    SwipeToDeleteItem(
+                    SwipeItem(
                         onDelete = { onDeleteBundle(bundle) },
+                        onEdit = { onEditBundle(bundle) }
                     ) {
                         BundleCard(
                             bundle = bundle,
@@ -132,26 +140,73 @@ fun HomeScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SwipeToDeleteItem(
+private fun SwipeItem(
     onDelete: () -> Unit,
+    onEdit: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    val dismissState = rememberSwipeToDismissBoxState()
 
-    LaunchedEffect(dismissState.currentValue) {
-        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var deleteConfirmed by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Confirm deletion") },
+            text = { Text("Are you sure you want to delete this item?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        deleteConfirmed = true
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                showDeleteDialog = true
+                false // If delete, don't dismiss until the user confirms
+            } else {
+                true // Otherwise doesn`t matter
+            }
+        }
+    )
+
+    if (deleteConfirmed) {
+        LaunchedEffect(deleteConfirmed) {
             onDelete()
+            deleteConfirmed = false
+        }
+    }
+
+    if (dismissState.currentValue == SwipeToDismissBoxValue.StartToEnd) {
+        LaunchedEffect(dismissState.currentValue) {
+            onEdit()
         }
     }
 
     SwipeToDismissBox(
         state = dismissState,
-        enableDismissFromStartToEnd = false,
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
         backgroundContent = {
             val color by animateColorAsState(
-                targetValue = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
-                    MaterialTheme.colorScheme.error
-                else Color.Transparent,
+                targetValue = when (dismissState.targetValue) {
+                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error
+                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.secondary
+                    else -> Color.Transparent
+                },
                 label = "swipe-bg",
             )
             Box(
@@ -162,11 +217,19 @@ private fun SwipeToDeleteItem(
                     .padding(end = 24.dp),
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.onError,
-                )
+                when (dismissState.targetValue) {
+                    SwipeToDismissBoxValue.EndToStart -> Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.onError,
+                    )
+                    SwipeToDismissBoxValue.StartToEnd -> Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Edit",
+                        tint = MaterialTheme.colorScheme.onSecondary,
+                    )
+                    else -> Unit
+                }
             }
         },
     ) {

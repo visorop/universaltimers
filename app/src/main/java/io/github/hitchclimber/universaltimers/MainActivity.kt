@@ -96,6 +96,10 @@ class MainActivity : ComponentActivity() {
                                 screen = Screen.TIMER
                             },
                             onDeleteBundle = { scope.launch { repo.delete(it) } },
+                            onEditBundle = {
+                                selectedBundle = it
+                                screen = Screen.EDIT
+                            },
                             onAddClick = {
                                 selectedBundle = null
                                 screen = Screen.EDIT
